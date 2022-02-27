@@ -77,20 +77,63 @@ void Core::interact() {
     }
 }
 
+namespace ns {
+// a simple struct to model a person
+struct person {
+    std::string name;
+    std::string address;
+    int age;
+};
+} // namespace ns
+
+ns::person p = {"Ned Flanders", "744 Evergreen Terrace", 60};
+
 void Core::show_all_foreground_program() {
     std::vector<activity_s> activities;
-    get_all_activities_by_path(&activities);
+    get_all_activities(&activities);
+    tr::api::_apps apps;
 
-    system("cls");
-    std::cout << "all time records:\n";
-    std::cout << "name\t\t\ttime\n";
-    for (auto& i : activities) {
-        std::string path = i.path;
-        auto pos_begin = path.find_last_of('\\');
-        auto pos_end = path.size() - 4;
-        std::string name = path.substr(pos_begin + 1, pos_end - pos_begin - 1);
-        std::cout << name << "\t\t\t" << i.total_time << std::endl;
+    for (auto& target : activities) {
+        bool sign = false;
+        for (auto& i : apps) {
+            if (strcmp(i[0].name, target.path) == 0) {
+                tr::api::application app;
+                strcpy(app.name, target.title);
+                strcpy(app.total, target.total_time);
+                app.recently[0] = 0;
+                app.today[0] = 0;
+                i.push_back(app);
+                sign = true;
+                break;
+            }
+        }
+        if (sign == false) {
+            std::vector<tr::api::application> single;
+            tr::api::application app;
+            strcpy(app.name, target.path);
+            strcpy(app.total, target.total_time);
+            app.recently[0] = 0;
+            app.today[0] = 0;
+            single.push_back(app);
+            apps.push_back(single);
+        }
     }
+
+    for (auto& i : apps) {
+        for (auto& j : i) {
+            std::string name = j.name;
+            auto pos = name.find_last_of('\\');
+            strcpy(j.name,
+                   name.substr(pos + 1, name.size() - 4 - pos - 1).c_str());
+        }
+    }
+
+    std::cout << nlohmann::json(apps);
+}
+
+void Core::GBKToUTF8(const wchar_t* src, char* dst) {
+    static std::wstring_convert<std::codecvt_utf8<wchar_t>> wcv; // GBK 转 utf-8
+    strcpy(dst, wcv.to_bytes(src).c_str());
 }
 
 void Core::heartbeat_foreground_program() {
@@ -106,7 +149,6 @@ void Core::heartbeat_foreground_program() {
 
     static bool sign; // 程序路径获取成功?
     static heartbeat_s program;
-    static std::wstring_convert<std::codecvt_utf8<wchar_t>> wcv; // GBK 转 utf-8
     static LPWSTR buffer = new WCHAR[260]; // 供获取程序路径使用的缓冲区
     static DWORD pid;
     static HWND hwnd;
@@ -119,10 +161,10 @@ void Core::heartbeat_foreground_program() {
     sign = K32GetModuleFileNameExW(hProcess, NULL, buffer, 260);
     if (sign) {
         program.type = activity_s::TYPE::PROGRAM;
-        strcpy(program.path, wcv.to_bytes(buffer).c_str());
+        GBKToUTF8(buffer, program.path);
         // 获取窗口标题
         if (GetWindowTextW(hwnd, buffer, 260))
-            strcpy(program.title, wcv.to_bytes(buffer).c_str());
+            GBKToUTF8(buffer, program.title);
         else
             program.title[0] = '\0';
     }
@@ -250,7 +292,17 @@ void Core::get_now_time(size_t* julianday, size_t* msecs) {
     }
 }
 
-void Core::get_db_path(char* const db_path) { strcpy(db_path, "./tr_core.db"); }
+void Core::get_db_path(char* const db_path) {
+    wchar_t buffer[MAX_PATH];
+    GetModuleFileNameW(NULL, buffer, MAX_PATH);
+    GBKToUTF8(buffer, db_path);
+
+    std::string str(db_path);
+    auto pos = str.find_last_of("\\");
+    strcpy(db_path, str.substr(0, pos).c_str());
+
+    strcat(db_path, "\\tr_core.db");
+}
 
 void Core::get_statement_init(char* const sql) {
     const char* pre_sql = R"(

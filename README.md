@@ -1,1 +1,1 @@
-# trcore - TimeRecorderCore
+# TimeRecorder

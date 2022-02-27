@@ -1,0 +1,14 @@
+{
+	"name": "timerecorder-electron",
+	"version": "1.0.0",
+	"description": "TimeRecorder",
+	"main": "main.js",
+	"scripts": {
+		"start": "electron ."
+	},
+	"author": "qingl",
+	"license": "GPL",
+	"devDependencies": {
+		"electron": "^17.0.0"
+	}
+}

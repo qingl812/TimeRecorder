@@ -1,10 +1,11 @@
 #ifndef TR_CORE_H__
 #define TR_CORE_H__
 #include "sqlite3.h"
+#include <json.hpp>
 #include <string>
 #include <vector>
+#include "api.h"
 
-// string 都使用 UTF-8 编码
 namespace tr {
 struct activity_s {
     enum class TYPE {
@@ -38,7 +39,10 @@ struct record_s {
     int last_begin_time;
     int last_end_time;
 };
+} // namespace tr
 
+// string 都使用 UTF-8 编码
+namespace tr {
 class Core {
 public:
     Core();
@@ -57,6 +61,8 @@ private:
     void heartbeat();
     // 显示所有记录的前台活动程序及其使用时间
     void show_all_foreground_program();
+
+    static void GBKToUTF8(const wchar_t* src, char* dst);
 
 private:
     /* 关于数据量, 假设每 100ms 产生一条数据
